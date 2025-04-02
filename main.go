@@ -16,29 +16,45 @@ func main() {
 	}
 	defer file.Close()
 
-	var line = ""
+	ch := getLinesChannel(file)
+	for line := range ch {
+		fmt.Println("read: ", line)
+	}
 
-	for {
-		buf := make([]byte, 8)
-		n, err := file.Read(buf)
-		if err != nil {
-			if err == io.EOF {
+}
+
+func getLinesChannel(f io.ReadCloser) <-chan string {
+	var line = ""
+	var ch = make(chan string)
+
+	go func() {
+		for {
+			buf := make([]byte, 8)
+			n, err := f.Read(buf)
+			if err != nil {
+				if err == io.EOF {
+					break
+				}
+				panic(err)
+			}
+			if n == 0 {
 				break
 			}
-			panic(err)
-		}
-		if n == 0 {
-			break
+
+			parts := strings.Split(string(buf), "\n")
+			if len(parts) > 1 {
+				line = fmt.Sprintf("%s%s", line, parts[0])
+				ch <- line
+				line = parts[1]
+				continue
+			}
+
+			line = fmt.Sprintf("%s%s", line, string(buf))
 		}
 
-		parts := strings.Split(string(buf), "\n")
-		if len(parts) > 1 {
-			line = fmt.Sprintf("%s%s", line, parts[0])
-			fmt.Println("read:", line)
-			line = parts[1]
-			continue
-		}
+		// NOTE: Remmember that a channel must always be closed
+		close(ch)
+	}()
 
-		line = fmt.Sprintf("%s%s", line, string(buf))
-	}
+	return ch
 }
