@@ -3,22 +3,32 @@ package main
 import (
 	"fmt"
 	"io"
-	"os"
+	"net"
 	"strings"
 )
 
 const FILE_NAME = "messages.txt"
 
 func main() {
-	file, err := os.Open(FILE_NAME)
+	listener, err := net.Listen("tcp", ":8080")
 	if err != nil {
 		panic(err)
 	}
-	defer file.Close()
+	defer listener.Close()
 
-	ch := getLinesChannel(file)
-	for line := range ch {
-		fmt.Println("read: ", line)
+	for {
+		conn, err := listener.Accept()
+		if err != nil {
+			panic(err)
+		}
+
+		fmt.Println("client connected")
+
+		ch := getLinesChannel(conn)
+		for line := range ch {
+			fmt.Println(line)
+		}
+		fmt.Println("client disconnected")
 	}
 
 }
@@ -31,14 +41,12 @@ func getLinesChannel(f io.ReadCloser) <-chan string {
 		for {
 			buf := make([]byte, 8)
 			n, err := f.Read(buf)
-			if err != nil {
-				if err == io.EOF {
-					break
-				}
-				panic(err)
-			}
 			if n == 0 {
+				// NOTE: The order is important when n == 0 err == io.EOF
 				break
+			}
+			if err != nil {
+				panic(err)
 			}
 
 			parts := strings.Split(string(buf), "\n")
