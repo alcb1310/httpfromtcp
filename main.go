@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strings"
 )
 
 const FILE_NAME = "messages.txt"
@@ -14,6 +15,8 @@ func main() {
 		panic(err)
 	}
 	defer file.Close()
+
+	var line = ""
 
 	for {
 		buf := make([]byte, 8)
@@ -27,6 +30,15 @@ func main() {
 		if n == 0 {
 			break
 		}
-		fmt.Println("read:", string(buf))
+
+		parts := strings.Split(string(buf), "\n")
+		if len(parts) > 1 {
+			line = fmt.Sprintf("%s%s", line, parts[0])
+			fmt.Println("read:", line)
+			line = parts[1]
+			continue
+		}
+
+		line = fmt.Sprintf("%s%s", line, string(buf))
 	}
 }
