@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 	"log/slog"
@@ -23,18 +24,31 @@ func main() {
 		}
 	}()
 
+	str := ""
 	for {
 		buf := make([]byte, 8)
 		n, err := file.Read(buf)
 		if err != nil {
 			if err == io.EOF {
-				os.Exit(0)
+				break
 			}
 
 			slog.Error("Unable to read the file", "err", err)
 			os.Exit(1)
 		}
 
-		fmt.Printf("read: %s\n", string(buf[:n]))
+		buf = buf[:n]
+		if idx := bytes.IndexByte(buf, '\n'); idx != -1 {
+			str += string(buf[:idx])
+			buf = buf[idx+1:]
+			fmt.Printf("read: %s\n", str)
+			str = ""
+		}
+		str += string(buf)
+
+	}
+
+	if len(str) > 0 {
+		fmt.Printf("read: %s\n", str)
 	}
 }
