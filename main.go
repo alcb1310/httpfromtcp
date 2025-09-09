@@ -5,20 +5,28 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"net"
 	"os"
 )
 
 func main() {
-	file, err := os.Open("messages.txt")
+	listener, err := net.Listen("tcp", ":8080")
 
 	if err != nil {
 		slog.Error("Unable to open the file", "err", err)
 		os.Exit(1)
 	}
 
-	lines := getLinesChannel(file)
-	for line := range lines {
-		fmt.Printf("read line: %s\n", line)
+	for {
+		conn, err := listener.Accept()
+		if err != nil {
+			slog.Error("Unable to accept the connection", "err", err)
+			os.Exit(1)
+		}
+
+		for line := range getLinesChannel(conn) {
+			fmt.Printf("read %s\n", line)
+		}
 	}
 }
 
